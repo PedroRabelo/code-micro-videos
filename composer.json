@@ -12,7 +12,9 @@
         "fideloper/proxy": "^4.0",
         "laravel/framework": "~6.18",
         "laravel/tinker": "^1.0",
-        "laravel/ui": "^1.0"
+        "laravel/ui": "^1.0",
+        "tymon/jwt-auth": "^1.0",
+        "vizir/laravel-keycloak-web-guard": "^2.3"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "2.8",
