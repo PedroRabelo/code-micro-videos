@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Category;
+use App\Models\Genre;
+use App\Models\Video;
 use Illuminate\Http\Request;
 
 class GenreController extends BasicCrudController
 {
     private $rules = [
         'name' => 'required|max:255',
+        'description' => 'nullable',
         'is_active' => 'boolean',
         'categories_id' => 'required|array|exists:categories,id,deleted_at,NULL'
     ];
@@ -47,7 +50,7 @@ class GenreController extends BasicCrudController
 
     protected function model()
     {
-        return Category::class;
+        return Genre::class;
     }
 
     protected function rulesStore()
