@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Category;
 use App\Models\Genre;
 use App\Models\Video;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class GenreController extends BasicCrudController
@@ -61,6 +61,21 @@ class GenreController extends BasicCrudController
     protected function rulesUpdate()
     {
         return $this->rules;
+    }
+
+    protected function resource()
+    {
+        return GenreResource::class;
+    }
+
+    protected function resourceCollection()
+    {
+        return $this->resource();
+    }
+
+    protected function queryBuilder(): Builder
+    {
+        return parent::queryBuilder()->with('categories');
     }
 
 }
