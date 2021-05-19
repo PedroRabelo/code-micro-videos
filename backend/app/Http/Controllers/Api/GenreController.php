@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Resources\GenreResource;
 use App\Models\Genre;
 use App\Models\Video;
 use Illuminate\Database\Eloquent\Builder;
