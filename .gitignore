@@ -12,3 +12,4 @@
 /.docker/dbdata/ibdata1
 /.docker/dbdata/private_key.pem
 /.docker/dbdata/server-key.pem
+/.docker/dbdata/ibtmp1
