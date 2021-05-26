@@ -1,9 +1,9 @@
 import * as React from 'react';
+import {useEffect, useState} from 'react';
 import {Box, Button, ButtonProps, makeStyles, MenuItem, TextField} from '@material-ui/core';
 import {Theme} from '@material-ui/core/styles';
 import {Controller, useForm} from 'react-hook-form';
 import genreHttp from '../../util/http/genre-http';
-import {useEffect, useState} from 'react';
 import categoryHttp from '../../util/http/category-http';
 
 const useStyles = makeStyles((theme: Theme) => {
@@ -20,17 +20,18 @@ export const Form = () => {
 
     const buttonProps: ButtonProps = {
         className: classes.submit,
-        variant: 'outlined',
+        color: 'secondary',
+        variant: 'contained',
     };
 
     const [categories, setCategories] = useState<any[]>([]);
     const {register, handleSubmit, control, getValues, setValue, watch} = useForm({
         defaultValues: {
+            name: "",
             categories_id: []
         }
     });
-    const category = getValues()['categories_id'];
-
+    
     useEffect(() => {
         register("categories_id")
     }, [register]);
@@ -52,7 +53,6 @@ export const Form = () => {
             <Controller
                 name="name"
                 control={control}
-                defaultValue=""
                 render={({ field: { onChange, value}, fieldState: { error }}) => (
                     <TextField
                         label="Nome"
@@ -68,7 +68,6 @@ export const Form = () => {
             <Controller
                 name="categories_id"
                 control={control}
-                defaultValue={[]}
                 render={({ field: { onChange, value}, fieldState: { error }}) => (
                     <TextField
                         select
@@ -78,6 +77,7 @@ export const Form = () => {
                         margin={'normal'}
                         value={watch('categories_id')}
                         onChange={(e) => {
+                            // @ts-ignore
                             setValue('categories_id', e.target.value);
                         }}
                         SelectProps={{

@@ -18,7 +18,8 @@ export const Form = () => {
 
     const buttonProps: ButtonProps = {
         className: classes.submit,
-        variant: 'outlined',
+        color: 'secondary',
+        variant: 'contained',
     };
 
     const {handleSubmit, control, getValues} = useForm();
@@ -74,6 +75,7 @@ export const Form = () => {
                 defaultValue={true}
                 render={({ field: { onChange, value}}) => (
                     <Checkbox
+                        color={'primary'}
                         defaultChecked
                         value={value}
                         onChange={onChange}
