@@ -1,8 +1,13 @@
 import * as React from 'react';
-import {TextField, Checkbox, Box, Button, ButtonProps, makeStyles} from '@material-ui/core';
+import {useEffect, useState} from 'react';
+import {Box, Button, ButtonProps, Checkbox, FormControlLabel, makeStyles, TextField} from '@material-ui/core';
 import {Theme} from '@material-ui/core/styles';
-import {useForm, Controller} from 'react-hook-form';
+import useForm from 'react-hook-form';
 import categoryHttp from '../../util/http/category-http';
+import * as yup from '../../util/vendor/yup';
+import {useHistory, useParams} from "react-router";
+import {CategoryParams} from "./PageForm";
+import {useSnackbar} from "notistack";
 
 const useStyles = makeStyles((theme: Theme) => {
     return {
@@ -12,77 +17,139 @@ const useStyles = makeStyles((theme: Theme) => {
     }
 });
 
+const validationSchema = yup.object().shape({
+    name: yup.string()
+        .label('Nome')
+        .required()
+        .max(255),
+});
+
 export const Form = () => {
+    const { register, handleSubmit, getValues, setValue, errors, watch, reset } = useForm({
+        validationSchema,
+        defaultValues: {
+            name: "",
+            is_active: true
+        }
+    });
 
     const classes = useStyles();
+    const snackbar = useSnackbar();
+    const history = useHistory();
+    const {id} = useParams<CategoryParams>();
+    const [category, setCategory] = useState<{ id: string } | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const buttonProps: ButtonProps = {
         className: classes.submit,
         color: 'secondary',
         variant: 'contained',
+        disabled: loading
     };
 
-    const {handleSubmit, control, getValues} = useForm();
+    useEffect(() => {
+        register({name: "is_active"})
+    }, [register]);
 
-    function onSubmit(formData, event) {
-        categoryHttp
-            .create(formData)
-            .then((response) => console.log(response));
+    useEffect(() => {
+        if (!id) {
+            return;
+        }
+
+        async function getCategory() {
+            setLoading(true);
+            try {
+                const {data} = await categoryHttp.get(id);
+                setCategory(data.data);
+                reset(data.data);
+            } catch (error) {
+                console.log(error);
+                snackbar.enqueueSnackbar(
+                    'Não foi possível carregar as informações',
+                    {variant: 'error'}
+                )
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        getCategory();
+    }, []);
+
+    async function onSubmit(formData, event) {
+        setLoading(true);
+        try {
+            const http = !category
+                ? categoryHttp.create(formData)
+                : categoryHttp.update(category.id, formData);
+            const {data} = await http;
+            snackbar.enqueueSnackbar(
+                'Categoria salva com sucesso',
+                {variant: 'success'}
+            );
+            setTimeout(() => {
+                event
+                    ? (
+                        id
+                            ? history.replace(`/categories/${data.data.id}/edit`)
+                            : history.push(`/categories/${data.data.id}/edit`)
+                    )
+                    : history.push('/categories')
+            });
+        } catch (error) {
+            console.log(error);
+            snackbar.enqueueSnackbar(
+                'Não foi possível salvar a categoria',
+                {variant: 'error'}
+            )
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
-            <Controller
+            <TextField
                 name="name"
-                control={control}
-                defaultValue=""
-                render={({ field: { onChange, value}, fieldState: { error }}) => (
-                    <TextField
-                        label="Nome"
-                        fullWidth
-                        variant={'outlined'}
-                        value={value}
-                        onChange={onChange}
-                        error={!!error}
-                        helperText={error ? error.message : null}
-                    />
-                )}
+                label="Nome"
+                fullWidth
+                variant={"outlined"}
+                inputRef={register}
+                disabled={loading}
+                error={errors.name !== undefined}
+                helperText={errors.name && errors.name.message}
+                InputLabelProps={{shrink: true}}
             />
+            {errors.name && <p>{errors.name.message}</p>}
 
-            <Controller
+            <TextField
                 name="description"
-                control={control}
-                defaultValue=""
-                render={({ field: { onChange, value}, fieldState: { error }}) => (
-                    <TextField
-                        label="Descrição"
-                        multiline
-                        rows="4"
-                        fullWidth
-                        variant={'outlined'}
-                        margin={'normal'}
-                        value={value}
-                        onChange={onChange}
-                        error={!!error}
-                        helperText={error ? error.message : null}
-                    />
-                )}
+                label="Descrição"
+                multiline
+                rows="4"
+                fullWidth
+                variant={"outlined"}
+                margin={"normal"}
+                inputRef={register}
+                disabled={loading}
+                InputLabelProps={{shrink: true}}
             />
 
-            <Controller
-                name="is_active"
-                control={control}
-                defaultValue={true}
-                render={({ field: { onChange, value}}) => (
+            <FormControlLabel
+                disabled={loading}
+                control={
                     <Checkbox
-                        color={'primary'}
-                        defaultChecked
-                        value={value}
-                        onChange={onChange}
+                        name="is_active"
+                        color={"primary"}
+                        onChange={
+                            () => setValue('is_active', !getValues()['is_active'])
+                        }
+                        checked={watch('is_active')}
                     />
-                )}
+                }
+                label={'Ativo?'}
+                labelPlacement={'end'}
             />
-            Ativo?
             <Box dir={"rtl"}>
                 <Button {...buttonProps} onClick={() => onSubmit(getValues(), null)}>Salvar</Button>
                 <Button {...buttonProps} type="submit">Salvar e continuar editando</Button>

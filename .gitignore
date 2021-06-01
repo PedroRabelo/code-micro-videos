@@ -1,8 +1,8 @@
 .idea/
 .vscode/
-./.docker/dbdata
 /.npm-cache/
 ./.npm-cache
+/.docker/dbdata/
 /.docker/dbdata/auto.cnf
 /.docker/dbdata/ca-key.pem
 /.docker/dbdata/client-key.pem
