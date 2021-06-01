@@ -1,10 +1,11 @@
 import * as React from 'react';
-import MUIDataTable, {MUIDataTableColumn} from 'mui-datatables';
 import {useEffect, useState} from 'react';
-import {httpVideo} from '../../util/http';
+import MUIDataTable, {MUIDataTableColumn} from 'mui-datatables';
 
 import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
+import castMemberHttp from "../../util/http/cast-member-http";
+import {CastMember, ListResponse} from "../../util/models";
 
 const CastMemberTypeMap = {
     1: 'Diretor',
@@ -36,19 +37,22 @@ const columnsDefinition: MUIDataTableColumn[] = [
     }
 ]
 
-type Props = {
+const Table = () => {
 
-};
-
-const Table = (props: Props) => {
-
-    const [data, setData] = useState([]);
+    const [data, setData] = useState<CastMember[]>([]);
 
     useEffect(() => {
-        (async function getCastMember() {
-            const {data} = await httpVideo.get('cast_members');
-            setData(data.data);
+        let isSubscribed = true;
+        (async () => {
+            const {data} = await castMemberHttp.list<ListResponse<CastMember>>();
+            if (isSubscribed) {
+                setData(data.data);
+            }
         })();
+
+        return () => {
+            isSubscribed = false;
+        };
     }, []);
 
     return (

@@ -1,33 +1,22 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {
-    Box,
-    Button,
-    ButtonProps,
     FormControl,
     FormControlLabel,
     FormHelperText,
     FormLabel,
-    makeStyles,
     Radio,
     RadioGroup,
     TextField
 } from '@material-ui/core';
-import {Theme} from '@material-ui/core/styles';
 import useForm from 'react-hook-form';
 import castMemberHttp from '../../util/http/cast-member-http';
 import * as yup from "../../util/vendor/yup";
 import {useSnackbar} from "notistack";
 import {useHistory, useParams} from "react-router";
 import {CastMemberParams} from "./PageForm";
-
-const useStyles = makeStyles((theme: Theme) => {
-    return {
-        submit: {
-            margin: theme.spacing(1)
-        }
-    }
-});
+import SubmitActions from "../../components/SubmitActions";
+import {DefaultForm} from "../../components/DefaultForm";
 
 const validationSchema = yup.object().shape({
     name: yup.string()
@@ -40,23 +29,24 @@ const validationSchema = yup.object().shape({
 });
 
 export const Form = () => {
-    const {register, handleSubmit, getValues, setValue, errors,reset, watch} = useForm({
+    const {
+        register,
+        handleSubmit,
+        getValues,
+        setValue,
+        errors,
+        reset,
+        watch,
+        triggerValidation
+    } = useForm({
         validationSchema,
     });
 
-    const classes = useStyles();
     const snackbar = useSnackbar();
     const history = useHistory();
     const {id} = useParams<CastMemberParams>();
-    const [castMember, setCastMember] = useState<{ id: string } | null>(null);
+    const [castMember, setCastMember] = useState<CastMemberParams | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-
-    const buttonProps: ButtonProps = {
-        className: classes.submit,
-        color: 'secondary',
-        variant: 'contained',
-        disabled: loading,
-    };
 
     useEffect(() => {
         register({name: "type"})
@@ -66,25 +56,29 @@ export const Form = () => {
         if (!id) {
             return;
         }
-
-        async function getCastMember() {
+        let isSubscribed = true;
+        (async () => {
             setLoading(true);
             try {
                 const {data} = await castMemberHttp.get(id);
-                setCastMember(data.data);
-                reset(data.data);
+                if (isSubscribed) {
+                    setCastMember(data.data);
+                    reset(data.data);
+                }
             } catch (error) {
-                console.log(error);
+                console.error(error);
                 snackbar.enqueueSnackbar(
                     'Não foi possível carregar as informações',
-                    {variant: 'error'}
+                    {variant: 'error',}
                 )
             } finally {
                 setLoading(false);
             }
-        }
+        })();
 
-        getCastMember();
+        return () => {
+            isSubscribed = false;
+        }
     }, []);
 
     async function onSubmit(formData, event) {
@@ -119,7 +113,7 @@ export const Form = () => {
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <DefaultForm GridItemProps={{xs: 12, md: 6}} onSubmit={handleSubmit(onSubmit)}>
             <TextField
                 name="name"
                 label="Nome"
@@ -151,10 +145,14 @@ export const Form = () => {
                     errors.type && <FormHelperText id="type-helper-text">{errors.type.message}</FormHelperText>
                 }
             </FormControl>
-            <Box dir={"rtl"}>
-                <Button {...buttonProps} onClick={() => onSubmit(getValues(), null)}>Salvar</Button>
-                <Button {...buttonProps} type="submit">Salvar e continuar editando</Button>
-            </Box>
-        </form>
+            <SubmitActions
+                disabledButtons={loading}
+                handleSave={() =>
+                    triggerValidation().then(isValid => {
+                        isValid && onSubmit(getValues(), null)
+                    })
+                }
+            />
+        </DefaultForm>
     );
 };
