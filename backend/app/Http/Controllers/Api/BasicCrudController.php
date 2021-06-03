@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -25,13 +26,13 @@ abstract class BasicCrudController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->get('per_page', $this->defaultPerPage);
-        // $hasFilter = in_array(Filterable::class, class_uses($this->model()));
+        $hasFilter = in_array(Filterable::class, class_uses($this->model()));
 
         $query = $this->queryBuilder();
 
-//        if($hasFilter){
-//            $query = $query->filter($request->all());
-//        }
+        if($hasFilter){
+            $query = $query->filter($request->all());
+        }
 
         $data = $request->has('all') || !$this->defaultPerPage
             ? $query->get()

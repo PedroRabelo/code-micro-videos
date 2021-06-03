@@ -55,7 +55,7 @@ export const Form = () => {
         let isSubscribed = true;
         (async () => {
             setLoading(true);
-            const promises = [categoryHttp.list()];
+            const promises = [categoryHttp.list({queryParams: {all: ''}})];
             if (id) {
                 promises.push(genreHttp.get(id));
             }
