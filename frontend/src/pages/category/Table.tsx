@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 
 import format from 'date-fns/format';
 import parseISO from 'date-fns/parseISO';
@@ -11,6 +11,23 @@ import {useSnackbar} from 'notistack';
 import {IconButton, MuiThemeProvider} from '@material-ui/core';
 import EditIcon from '@material-ui/icons/Edit';
 import {Link} from 'react-router-dom';
+
+interface Pagination {
+    page: number;
+    total: number;
+    per_page: number;
+}
+
+interface Order {
+    sort: string | null;
+    dir: string | null;
+}
+
+interface SearchState {
+    search: string | null;
+    pagination: Pagination;
+    order: Order;
+}
 
 const columnsDefinition: TableColumn[] = [
     {
@@ -68,47 +85,131 @@ const columnsDefinition: TableColumn[] = [
     }
 ];
 
-type Props = {};
-
-const Table = (props: Props) => {
+const Table = () => {
 
     const snackbar = useSnackbar();
+    const subscribed = useRef(true);
     const [data, setData] = useState<Category[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
+    const [searchstate, setSearchState] = useState<SearchState>({
+        search: '',
+        pagination: {
+            page: 1,
+            total: 0,
+            per_page: 10,
+        },
+        order: {
+            sort: null,
+            dir: null,
+        }
+    });
+
+    const columns = columnsDefinition.map(column => {
+        return column.name === searchstate.order.sort
+          ? {
+              ...column,
+              options: {
+                  ...column.options,
+                  sortDirection: searchstate.order.dir as any
+              }
+          }
+          : column;
+    });
 
     useEffect(() => {
-        let isSubscribed = true;
-        (async () => {
-            setLoading(true);
-            try{
-                const {data} = await categoryHttp.list<ListResponse<Category>>();
-                if (isSubscribed) {
-                    setData(data.data);
-                }
-            } catch (error) {
-                console.log(error);
-                snackbar.enqueueSnackbar(
-                  'Não foi possível salvar o membro de elenco',
-                  {variant: 'error'}
-                )
-            } finally {
-                setLoading(false);
-            }
-        })();
-
+        subscribed.current = true;
+        getData();
         return () => {
-            isSubscribed = false;
-        };
-    }, []);
+            subscribed.current = false;
+        }
+
+    }, [
+      searchstate.search,
+      searchstate.pagination.page,
+      searchstate.pagination.per_page,
+      searchstate.order
+    ]);
+
+    async function getData() {
+        setLoading(true);
+        try{
+            const {data} = await categoryHttp.list<ListResponse<Category>>({
+                queryParams: {
+                    search: searchstate.search,
+                    page: searchstate.pagination.page,
+                    per_page: searchstate.pagination.per_page,
+                    sort: searchstate.order.sort,
+                    dir: searchstate.order.dir,
+                }
+            });
+            if (subscribed.current) {
+                setData(data.data);
+                setSearchState((prevState => ({
+                    ...prevState,
+                    pagination: {
+                        ...prevState.pagination,
+                        total: data.meta.total,
+                    }
+                })))
+            }
+        } catch (error) {
+            console.log(error);
+            if (categoryHttp.isCancelledRequest(error)) {
+              return;
+            }
+            snackbar.enqueueSnackbar(
+              'Não foi possível salvar o membro de elenco',
+              {variant: 'error'}
+            )
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
       <MuiThemeProvider theme={makeActionStyles(columnsDefinition.length - 1)}>
           <DefaultTable
             title=""
-            columns={columnsDefinition}
+            columns={columns}
             data={data}
             loading={loading}
-            options={{responsive: "vertical"}}
+            options={{
+                serverSide: true,
+                responsive: "vertical",
+                searchText: searchstate.search != null ? searchstate.search : undefined,
+                page: searchstate.pagination.page - 1,
+                rowsPerPage: searchstate.pagination.per_page,
+                count: searchstate.pagination.total,
+                onSearchChange: (value) => setSearchState((prevState => ({
+                      ...prevState,
+                      search: value
+                    }
+                ))),
+                onChangePage: (page) => setSearchState((prevState => ({
+                      ...prevState,
+                      pagination: {
+                          ...prevState.pagination,
+                          page: page + 1,
+                      }
+                  }
+                ))),
+                onChangeRowsPerPage: (perPage) => setSearchState((prevState => ({
+                      ...prevState,
+                      pagination: {
+                          ...prevState.pagination,
+                          per_page: perPage,
+                      }
+                  }
+                ))),
+                onColumnSortChange: (changedColumn: string, direction: string) => setSearchState((prevState => ({
+                      ...prevState,
+                      order: {
+                          sort: changedColumn,
+                          dir: direction.includes('desc') ? 'desc' : 'asc',
+                      }
+                  }
+                ))),
+            }}
           />
       </MuiThemeProvider>
 
