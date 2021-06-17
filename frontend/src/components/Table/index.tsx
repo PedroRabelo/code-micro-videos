@@ -1,13 +1,9 @@
 import * as React from 'react';
 import MUIDataTable, {MUIDataTableColumn, MUIDataTableOptions, MUIDataTableProps} from "mui-datatables";
 import {merge, omit, cloneDeep} from 'lodash';
-import {MuiThemeProvider, useMediaQuery, useTheme} from '@material-ui/core';
-import {Theme} from '@material-ui/core/styles';
+import {MuiThemeProvider, Theme, useMediaQuery, useTheme} from "@material-ui/core";
 import DebouncedTableSearch from "./DebouncedTableSearch";
-
-export interface TableColumn extends MUIDataTableColumn {
-    width?: string;
-}
+import {RefAttributes} from "react";
 
 const makeDefaultOptions = (debouncedSearchTime?): MUIDataTableOptions => ({
     print: false,
@@ -45,7 +41,10 @@ const makeDefaultOptions = (debouncedSearchTime?): MUIDataTableOptions => ({
             deleteAria: "Excluir registros selecionados",
         },
     },
-    customSearchRender: (searchText: string, handleSearch: any, hideSearch: any, options: any) => {
+    customSearchRender: (searchText: string,
+                         handleSearch: any,
+                         hideSearch: any,
+                         options: any) => {
         return <DebouncedTableSearch
             searchText={searchText}
             onSearch={handleSearch}
@@ -56,20 +55,29 @@ const makeDefaultOptions = (debouncedSearchTime?): MUIDataTableOptions => ({
     }
 });
 
-interface TableProps extends MUIDataTableProps {
+export interface TableColumn extends MUIDataTableColumn {
+    width?: string
+}
+
+export interface MuiDataTableRefComponent{
+    changePage: (page: number) => void;
+    changeRowsPerPage: (rowsPerPage: number) => void;
+}
+
+export interface TableProps extends MUIDataTableProps, RefAttributes<MuiDataTableRefComponent> {
     columns: TableColumn[];
     loading?: boolean;
     debouncedSearchTime?: number;
 }
 
-const Table : React.FC<TableProps> = (props) => {
+const Table = React.forwardRef<MuiDataTableRefComponent, TableProps>((props, ref) => {
 
     function extractMuiDataTableColumns(columns: TableColumn[]): MUIDataTableColumn[] {
-        setColumnsWidth(columns);
+        setColumnsWith(columns);
         return columns.map(column => omit(column, 'width'))
     }
 
-    function setColumnsWidth(columns: TableColumn[]) {
+    function setColumnsWith(columns: TableColumn[]) {
         columns.forEach((column, key) => {
             if (column.width) {
                 const overrides = theme.overrides as any;
@@ -82,7 +90,9 @@ const Table : React.FC<TableProps> = (props) => {
 
     function applyLoading() {
         const textLabels = (newProps.options as any).textLabels;
-        textLabels.body.noMatch = newProps.loading ? 'Carregando...' : textLabels.body.noMatch;
+        textLabels.body.noMatch = newProps.loading === true
+            ? 'Carregando...'
+            : textLabels.body.noMatch;
     }
 
     function applyResponsive() {
@@ -90,16 +100,21 @@ const Table : React.FC<TableProps> = (props) => {
     }
 
     function getOriginalMuiDataTableProps() {
-        return omit(newProps, 'loading');
+        return {
+            ...omit(newProps, 'loading'),
+            ref
+        }
     }
 
     const theme = cloneDeep<Theme>(useTheme());
     const isSmOrDown = useMediaQuery(theme.breakpoints.down('sm'));
+
     const defaultOptions = makeDefaultOptions(props.debouncedSearchTime);
+
     const newProps = merge(
-      {options: cloneDeep(defaultOptions)},
-      props,
-      {columns: extractMuiDataTableColumns(props.columns)}
+        {options: cloneDeep(defaultOptions)},
+        props,
+        {columns: extractMuiDataTableColumns(props.columns)},
     );
 
     applyLoading();
@@ -108,11 +123,11 @@ const Table : React.FC<TableProps> = (props) => {
     const originalProps = getOriginalMuiDataTableProps();
 
     return (
-      <MuiThemeProvider theme={theme}>
-          <MUIDataTable {...originalProps} />
-      </MuiThemeProvider>
+        <MuiThemeProvider theme={theme}>
+            <MUIDataTable {...originalProps}/>
+        </MuiThemeProvider>
     );
-};
+});
 
 export default Table;
 
