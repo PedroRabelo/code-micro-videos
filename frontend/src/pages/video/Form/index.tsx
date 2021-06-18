@@ -1,15 +1,44 @@
 import * as React from 'react';
-import * as yup from "../../util/vendor/yup";
+import {useEffect, useState} from 'react';
+import * as yup from "../../../util/vendor/yup";
 import useForm from "react-hook-form";
 import {useSnackbar} from "notistack";
 import {useHistory, useParams} from "react-router";
-import {useEffect, useState} from "react";
-import {Video} from "../../util/models";
-import {VideoParams} from "./PageForm";
-import videoHttp from "../../util/http/video-http";
-import {DefaultForm} from "../../components/DefaultForm";
-import {Grid, TextField} from "@material-ui/core";
-import SubmitActions from "../../components/SubmitActions";
+import {Video, VideoFileFieldsMap} from "../../../util/models";
+import {VideoParams} from "../PageForm";
+import videoHttp from "../../../util/http/video-http";
+import {DefaultForm} from "../../../components/DefaultForm";
+import {
+    Card,
+    CardContent,
+    Checkbox,
+    FormControlLabel,
+    Grid,
+    makeStyles,
+    TextField,
+    Typography,
+    useMediaQuery,
+    useTheme
+} from "@material-ui/core";
+import SubmitActions from "../../../components/SubmitActions";
+import RatingField from "./RatingField";
+import UploadField from "./UploadField";
+import {Theme} from "@material-ui/core/styles";
+
+const useStyles = makeStyles((theme: Theme) => ({
+    cardUpload: {
+        borderRadius: "4px",
+        backgroundColor: "#f5f5f5",
+        margin: theme.spacing(2, 0)
+    },
+    cardOpened: {
+        borderRadius: "4px",
+        backgroundColor: "#f5f5f5",
+    },
+    cardContentOpened: {
+        paddingBottom: theme.spacing(2) + 'px !important'
+    },
+}));
 
 const validationSchema = yup.object().shape({
     title: yup.string()
@@ -38,6 +67,8 @@ const validationSchema = yup.object().shape({
         .required()
 });
 
+const fileFields = Object.keys(VideoFileFieldsMap);
+
 export const Form = () => {
     const {
         register,
@@ -48,7 +79,6 @@ export const Form = () => {
         reset,
         watch,
         triggerValidation,
-        formState
     } = useForm({
         validationSchema,
         defaultValues: {
@@ -56,7 +86,11 @@ export const Form = () => {
             description: '',
             year_launched: null,
             duration: null,
-            rating: null,
+            rating: '',
+            banner_file: null,
+            thumb_file: null,
+            trailer_file: null,
+            video_file: null,
             cast_members: [],
             genres: [],
             categories: [],
@@ -64,11 +98,25 @@ export const Form = () => {
         }
     });
 
+    const classes = useStyles();
     const snackbar = useSnackbar();
     const history = useHistory();
     const {id} = useParams<VideoParams>();
     const [video, setVideo] = useState<Video | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const theme = useTheme();
+    const isGreaterMd = useMediaQuery(theme.breakpoints.up('md'));
+
+    useEffect(() => {
+        [
+            'rating',
+            'opened',
+            'cast_members',
+            'genres',
+            'categories',
+            ...fileFields
+        ].forEach(name => register({name}));
+    }, [register]);
 
     useEffect(() => {
         if (!id) {
@@ -194,6 +242,75 @@ export const Form = () => {
                             />
                         </Grid>
                     </Grid>
+                    Elenco
+                    <br/>
+                    Gêneros e categorias
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <RatingField
+                        value={watch('rating')}
+                        setValue={(value) => setValue('rating', value, true)}
+                        error={errors.rating}
+                        disabled={loading}
+                        FormControlProps={{
+                            margin: isGreaterMd ? 'none' : 'normal'
+                        }}
+                    />
+                    <br/>
+                    <Card className={classes.cardUpload}>
+                        <CardContent>
+                            <Typography color="primary" variant="h6">
+                                Imagens
+                            </Typography>
+                            <UploadField
+                                accept={'image/*'}
+                                label={'Thumb'}
+                                setValue={(value) => setValue('thumb_file', value)}
+                            />
+                            <UploadField
+                                accept={'image/*'}
+                                label={'Banner'}
+                                setValue={(value) => setValue('banner_file', value)}
+                            />
+                        </CardContent>
+                    </Card>
+                    <Card className={classes.cardUpload}>
+                        <CardContent>
+                            <Typography color="primary" variant="h6">
+                                Vídeos
+                            </Typography>
+                            <UploadField
+                                accept={'video/mp4'}
+                                label={'Trailer'}
+                                setValue={(value) => setValue('trailer_file', value)}
+                            />
+                            <UploadField
+                                accept={'video/mp4'}
+                                label={'Principal'}
+                                setValue={(value) => setValue('video_file', value)}
+                            />
+                        </CardContent>
+                    </Card>
+                    <br/>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                name="opened"
+                                color={'primary'}
+                                onChange={
+                                    () => setValue('opened', !getValues()['opened'])
+                                }
+                                checked={watch('opened')}
+                                disabled={loading}
+                            />
+                        }
+                        label={
+                            <Typography color="primary" variant={"subtitle2"}>
+                                Quero que este conteúdo apareça na seção lançamentos
+                            </Typography>
+                        }
+                        labelPlacement="end"
+                    />
                 </Grid>
             </Grid>
             <SubmitActions
