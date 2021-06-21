@@ -24,6 +24,10 @@ import SubmitActions from "../../../components/SubmitActions";
 import RatingField from "./RatingField";
 import UploadField from "./UploadField";
 import {Theme} from "@material-ui/core/styles";
+import AsyncAutocomplete from "../../../components/AsyncAutocomplete";
+import genreHttp from "../../../util/http/genre-http";
+import GridSelected from "../../../components/GridSelected";
+import GridSelectedItem from "../../../components/GridSelectedItem";
 
 const useStyles = makeStyles((theme: Theme) => ({
     cardUpload: {
@@ -178,6 +182,12 @@ export const Form = () => {
         }
     }
 
+    const fetchOptions = (searchText) => genreHttp.list({
+        queryParams: {
+            search: searchText, all: ''
+        }
+    }).then(({data}) => data.data);
+
     return (
         <DefaultForm
             GridItemProps={{xs: 12}}
@@ -244,7 +254,16 @@ export const Form = () => {
                     </Grid>
                     Elenco
                     <br/>
-                    Gêneros e categorias
+                    <AsyncAutocomplete
+                        fetchOptions={fetchOptions}
+                        AutocompleteProps={{
+                            freeSolo: true,
+                            getOptionLabel: option => option.name,
+                        }}
+                        TextFieldProps={{
+                            label: 'Gêneros'
+                        }}
+                    />
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <RatingField
